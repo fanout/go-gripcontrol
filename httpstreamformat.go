@@ -15,11 +15,11 @@ type HttpStreamFormat struct {
     Close bool
 }
 
-func (format HttpStreamFormat) Name() string {
+func (format *HttpStreamFormat) Name() string {
     return "http-stream"
 }
 
-func (format HttpStreamFormat) Export() interface{} {
+func (format *HttpStreamFormat) Export() interface{} {
     export := make(map[string]interface{})
     if (format.Close) {
         export["action"] = "close"

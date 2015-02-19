@@ -17,11 +17,11 @@ type HttpResponseFormat struct {
     Body []byte
 }
 
-func (format HttpResponseFormat) Name() string {
+func (format *HttpResponseFormat) Name() string {
     return "http-response"
 }
 
-func (format HttpResponseFormat) Export() interface{} {
+func (format *HttpResponseFormat) Export() interface{} {
     export := make(map[string]interface{})
     if (format.Code != "") {
         export["code"] = format.Code

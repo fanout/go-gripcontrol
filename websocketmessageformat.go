@@ -12,11 +12,11 @@ type WebSocketMessageFormat struct {
     Binary bool
 }
 
-func (format WebSocketMessageFormat) Name() string {
+func (format *WebSocketMessageFormat) Name() string {
     return "ws-message"
 }
 
-func (format WebSocketMessageFormat) Export() interface{} {
+func (format *WebSocketMessageFormat) Export() interface{} {
     export := make(map[string]interface{})
     if (format.Binary) {
         export["content-bin"] = string(format.Content)
