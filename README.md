@@ -108,33 +108,43 @@ func main() {
 }
 ```
 
-Long polling example via response _body_ using the WEBrick gem. The client connects to a GRIP proxy over HTTP and the proxy forwards the request to the origin. The origin subscribes the client to a channel and instructs it to long poll via the response _body_.
+Long polling example via response _body_. The client connects to a GRIP proxy over HTTP and the proxy forwards the request to the origin. The origin subscribes the client to a channel and instructs it to long poll via the response _body_.
 
 ```go
-require 'webrick'
-require 'gripcontrol'
+package main
 
-class GripBodyResponse < WEBrick::HTTPServlet::AbstractServlet
-  def do_GET(request, response)
-    # Validate the Grip-Sig header:
-    if !GripControl.validate_sig(request['Grip-Sig'], '<key>')
-      return
-    end
+import "github.com/fanout/go-gripcontrol"
+import "net/http"
+import "io"
 
-    # Instruct the client to long poll via the response body:
-    response.status = 200
-    response['Content-Type'] = 'application/grip-instruct'
-    response.body = GripControl.create_hold_response('<channel>')
-    # Or to optionally set a timeout value in seconds:
-    # response.body = GripControl.create_hold_response(
-    #     '<channel>', nil, <timeout_value>)
-  end
-end
+func HandleRequest(writer http.ResponseWriter, request *http.Request) {
+    // Validate the Grip-Sig header:
+    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "changeme")) {
+        http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
+        return
+    }
 
-server = WEBrick::HTTPServer.new(:Port => 80)
-server.mount "/", GripBodyResponse
-trap "INT" do server.shutdown end
-server.start
+    // Create channel list containing channel information:
+    channel := []*gripcontrol.Channel {&gripcontrol.Channel{Name: "test_channel"}}
+
+    // Create hold response body:
+    body, err := gripcontrol.CreateHoldResponse(channel, nil, nil)
+    // Or to optionally set a timeout value in seconds:
+    // timeout := <timeout_value>
+    // body, err := gripcontrol.CreateHoldResponse(channel, nil, &timeout)
+    if (err != nil) {
+        panic("Failed to create hold response: " + err.Error())
+    }
+
+    // Instruct the client to long poll via the response body:
+    writer.Header().Set("Content-Type", "application/grip-instruct")
+    io.WriteString(writer, body)
+}
+
+func main() {
+    http.HandleFunc("/", HandleRequest)
+    http.ListenAndServe(":80", nil)
+}
 ```
 
 WebSocket example using the WEBrick gem and WEBrick WebSocket gem extension. A client connects to a GRIP proxy via WebSockets and the proxy forward the request to the origin. The origin accepts the connection over a WebSocket and responds with a control message indicating that the client should be subscribed to a channel. Note that in order for the GRIP proxy to properly interpret the control messages, the origin must provide a 'grip' extension in the 'Sec-WebSocket-Extensions' header. This is accomplished in the WEBrick WebSocket gem extension by adding the following line to lib/webrick/websocket/server.rb and rebuilding the gem: res['Sec-WebSocket-Extensions'] = 'grip; message-prefix=""'
