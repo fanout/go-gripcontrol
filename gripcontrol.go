@@ -11,6 +11,62 @@ import "fmt"
 import "unicode/utf8"
 import "encoding/json"
 import "strings"
+import "github.com/dgrijalva/jwt-go"
+import "net/url"
+import "encoding/base64"
+
+func ParseGripUri(rawUri string) (map[string]interface{}, error) {
+    uri, err := url.Parse(rawUri)
+    if (err != nil) {
+        return nil, err
+    }
+    params := uri.Query()
+    iss := ""
+    key := ""
+    if _, ok := params["iss"]; ok {
+        iss = params["iss"][0]
+        delete(params, "iss")
+    }
+    if _, ok := params["key"]; ok {
+        key = params["key"][0]
+        delete(params, "key")
+    }
+    decodedKey := make([]byte, 0)
+    if (key != "" && key[:7] == "base64:") {
+        var err error
+        decodedKey, err = base64.StdEncoding.DecodeString(key[7:])
+        if err != nil {
+            return nil, err
+        }
+    }
+    qs := params.Encode()
+    path := uri.Path
+    if (path[len(path) - 1:] == "/") {
+        path = path[:len(path) - 1]
+    }
+    controlUri := uri.Scheme + "://" + uri.Host + path
+    if (len(qs) > 0) {
+        controlUri += "?" + qs
+    }
+    out := make(map[string]interface{})
+    out["control_uri"] = controlUri
+    if (iss != "") {        
+        out["control_iss"] = iss
+    }
+    if (len(decodedKey) > 0) {        
+        out["key"] = decodedKey
+    }
+    return out, nil
+}
+
+func ValidateSig(token, key string) bool {
+    parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{},
+            error) { return key, nil })
+    if (err == nil && parsedToken.Valid) {
+        return true;
+    }
+    return false
+}
 
 func CreateGripChannelHeader(channels []*Channel) string {
     var parts []string
