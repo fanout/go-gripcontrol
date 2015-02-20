@@ -8,7 +8,7 @@
 package gripcontrol
 
 type Response struct {
-    Code string
+    Code int
     Reason string
     Headers map[string]string
     Body []byte

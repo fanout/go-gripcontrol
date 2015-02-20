@@ -11,7 +11,7 @@ import "encoding/base64"
 import "unicode/utf8"
 
 type HttpResponseFormat struct {
-    Code string
+    Code int
     Reason string
     Headers map[string]string
     Body []byte
@@ -23,7 +23,7 @@ func (format *HttpResponseFormat) Name() string {
 
 func (format *HttpResponseFormat) Export() interface{} {
     export := make(map[string]interface{})
-    if (format.Code != "") {
+    if (format.Code > 0) {
         export["code"] = format.Code
     }
     if (format.Reason != "") {

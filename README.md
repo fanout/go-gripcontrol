@@ -21,7 +21,7 @@ Usage
 
 Examples for how to publish HTTP response and HTTP stream messages to GRIP proxy endpoints via the GripPubControl class.
 
-```Go
+```go
 package main
 
 import "github.com/fanout/go-pubcontrol"
@@ -72,42 +72,45 @@ func main() {
 
 Validate the Grip-Sig request header from incoming GRIP messages. This ensures that the message was sent from a valid source and is not expired. Note that when using Fanout.io the key is the realm key, and when using Pushpin the key is configurable in Pushpin's settings.
 
-```Go
-is_valid = GripControl.validate_sig(request['Grip-Sig'], '<key>')
+```go
+isValid := gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>")
 ```
 
-Long polling example via response _headers_ using the WEBrick gem. The client connects to a GRIP proxy over HTTP and the proxy forwards the request to the origin. The origin subscribes the client to a channel and instructs it to long poll via the response _headers_. Note that with the recent versions of Apache it's not possible to send a 304 response containing custom headers, in which case the response body should be used instead (next usage example below).
+Long polling example via response _headers_. The client connects to a GRIP proxy over HTTP and the proxy forwards the request to the origin. The origin subscribes the client to a channel and instructs it to long poll via the response _headers_. Note that with the recent versions of Apache it's not possible to send a 304 response containing custom headers, in which case the response body should be used instead (next usage example below).
 
-```Go
-require 'webrick'
-require 'gripcontrol'
+```go
+package main
 
-class GripHeadersResponse < WEBrick::HTTPServlet::AbstractServlet
-  def do_GET(request, response)
-    # Validate the Grip-Sig header:
-    if !GripControl.validate_sig(request['Grip-Sig'], '<key>')
-      return
-    end
+import "github.com/fanout/go-gripcontrol"
+import "net/http"
 
-    # Instruct the client to long poll via the response headers:
-    response.status = 200
-    response['Grip-Hold'] = 'response'
-    response['Grip-Channel'] = 
-        GripControl.create_grip_channel_header('<channel>')
-    # To optionally set a timeout value in seconds:
-    # response['Grip-Timeout'] = <timeout_value>
-  end
-end
+func HandleRequest(writer http.ResponseWriter, request *http.Request) {
+    // Validate the Grip-Sig header:
+    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>")) {
+        http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
+        return
+    }
 
-server = WEBrick::HTTPServer.new(:Port => 80)
-server.mount "/", GripHeadersResponse
-trap "INT" do server.shutdown end
-server.start
+    // Create channel header containing channel information:
+    channel := gripcontrol.CreateGripChannelHeader([]*gripcontrol.Channel {
+            &gripcontrol.Channel{Name: "<channel>"}})
+
+    // Instruct the client to long poll via the response headers:
+    writer.Header().Set("Grip-Hold", "response")
+    writer.Header().Set("Grip-Channel", channel)
+    // To optionally set a timeout value in seconds:
+    // writer.Header().Set("Grip-Timeout", "<timeout_value>")
+}
+
+func main() {
+    http.HandleFunc("/", HandleRequest)
+    http.ListenAndServe(":80", nil)
+}
 ```
 
 Long polling example via response _body_ using the WEBrick gem. The client connects to a GRIP proxy over HTTP and the proxy forwards the request to the origin. The origin subscribes the client to a channel and instructs it to long poll via the response _body_.
 
-```Go
+```go
 require 'webrick'
 require 'gripcontrol'
 
@@ -136,7 +139,7 @@ server.start
 
 WebSocket example using the WEBrick gem and WEBrick WebSocket gem extension. A client connects to a GRIP proxy via WebSockets and the proxy forward the request to the origin. The origin accepts the connection over a WebSocket and responds with a control message indicating that the client should be subscribed to a channel. Note that in order for the GRIP proxy to properly interpret the control messages, the origin must provide a 'grip' extension in the 'Sec-WebSocket-Extensions' header. This is accomplished in the WEBrick WebSocket gem extension by adding the following line to lib/webrick/websocket/server.rb and rebuilding the gem: res['Sec-WebSocket-Extensions'] = 'grip; message-prefix=""'
 
-```Go
+```go
 require 'webrick/websocket'
 require 'gripcontrol'
 require 'thread'
@@ -166,7 +169,7 @@ server.start
 
 WebSocket over HTTP example using the WEBrick gem. In this case, a client connects to a GRIP proxy via WebSockets and the GRIP proxy communicates with the origin via HTTP.
 
-```Go
+```go
 require 'webrick'
 require 'gripcontrol'
 
@@ -212,7 +215,7 @@ server.start
 
 Parse a GRIP URI to extract the URI, ISS, and key values. The values will be returned in a hash containing 'control_uri', 'control_iss', and 'key' keys.
 
-```Go
+```go
 config = GripControl.parse_grip_uri(
     'http://api.fanout.io/realm/<myrealm>?iss=<myrealm>' +
     '&key=base64:<myrealmkey>')

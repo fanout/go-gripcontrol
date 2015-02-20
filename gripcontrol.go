@@ -15,6 +15,79 @@ import "github.com/dgrijalva/jwt-go"
 import "net/url"
 import "encoding/base64"
 
+func CreateHoldResponse(channels []*Channel, response interface{},
+        timeout *int) (string, error) {
+    return CreateHold("response", channels, response, timeout)
+}
+
+func CreateHoldStream(channels []*Channel,
+        response interface{}) (string, error) {
+    return CreateHold("stream", channels, response, nil)
+}
+
+func CreateHold(mode string, channels []*Channel, response interface{},
+        timeout *int) (string, error) {
+    hold := make(map[string]interface{})
+    hold["mode"] = mode
+    ichannels := make([]map[string]string, 0)
+    for _, channel := range channels {
+        ichannel := make(map[string]string)
+        ichannel["name"] = channel.Name
+        if (channel.PrevId != "") {
+            ichannel["prev-id"] = channel.PrevId
+        }
+        ichannels = append(ichannels, ichannel)
+    }
+    hold["channels"] = ichannels
+    if (timeout != nil) {
+        hold["timeout"] = timeout
+    }
+    iresponse := make(map[string]interface{})
+    if (response != nil) {
+        var processedResponse *Response
+        switch response.(type) {
+            case *Response:
+                processedResponse = response.(*Response)
+            case string:
+                processedResponse = &Response{Body: []byte(response.(string))}
+            case []byte:
+                processedResponse = &Response{Body: response.([]byte)}
+            default:
+                return "", &GripFormatError{err: "response must be of type " + 
+                        "*Response, []byte, or string"}        
+        }
+        if (processedResponse.Code > 0) {
+            iresponse["code"] = processedResponse.Code
+        }
+        if (processedResponse.Reason != "") {
+            iresponse["reason"] = processedResponse.Reason
+        }
+        if (processedResponse.Headers != nil &&
+                len(processedResponse.Headers) > 0) {
+            iresponse["headers"] = processedResponse.Headers
+        }
+        if (processedResponse.Body != nil && len(processedResponse.Body) > 0) {
+            body := string(processedResponse.Body)
+            if (utf8.ValidString(body)) {
+                iresponse["body"] = body
+            } else {
+                iresponse["body-bin"] =
+                        base64.StdEncoding.EncodeToString(processedResponse.Body)
+            }
+        }
+    }
+    instruct := make(map[string]interface{})
+    instruct["hold"] = hold
+    if (len(iresponse) > 0) {
+        instruct["response"] = iresponse
+    }
+    message, err := json.Marshal(instruct)
+    if (err != nil) {
+        return "", err
+    }
+    return string(message), nil
+}
+
 func ParseGripUri(rawUri string) (map[string]interface{}, error) {
     uri, err := url.Parse(rawUri)
     if (err != nil) {
@@ -60,8 +133,8 @@ func ParseGripUri(rawUri string) (map[string]interface{}, error) {
 }
 
 func ValidateSig(token, key string) bool {
-    parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{},
-            error) { return key, nil })
+    parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{},
+            error) { return []byte(key), nil })
     if (err == nil && parsedToken.Valid) {
         return true;
     }
