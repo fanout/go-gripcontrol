@@ -119,13 +119,13 @@ import "io"
 
 func HandleRequest(writer http.ResponseWriter, request *http.Request) {
     // Validate the Grip-Sig header:
-    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "changeme")) {
+    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>")) {
         http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
         return
     }
 
     // Create channel list containing channel information:
-    channel := []*gripcontrol.Channel {&gripcontrol.Channel{Name: "test_channel"}}
+    channel := []*gripcontrol.Channel {&gripcontrol.Channel{Name: "<channel>"}}
 
     // Create hold response body:
     body, err := gripcontrol.CreateHoldResponse(channel, nil, nil)
