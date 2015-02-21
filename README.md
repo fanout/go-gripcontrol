@@ -17,7 +17,7 @@ Installation
 go get github.com/fanout/go-gripcontrol
 ```
 
-go-gripcontrol requires jwt-go 2.2.0 and go-pubcontrol 1.0.0. To ensure that the correct version of both of these dependencies are installed use godeps:
+go-gripcontrol requires jwt-go 2.2.0 and go-pubcontrol 1.0.1. To ensure that the correct version of both of these dependencies are installed use godeps:
 
 ```sh
 go get github.com/tools/godep
