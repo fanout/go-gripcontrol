@@ -86,7 +86,7 @@ import "net/http"
 
 func HandleRequest(writer http.ResponseWriter, request *http.Request) {
     // Validate the Grip-Sig header:
-    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>")) {
+    if !gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>") {
         http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
         return
     }
@@ -119,7 +119,7 @@ import "io"
 
 func HandleRequest(writer http.ResponseWriter, request *http.Request) {
     // Validate the Grip-Sig header:
-    if (!gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>")) {
+    if !gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>") {
         http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
         return
     }
@@ -132,7 +132,7 @@ func HandleRequest(writer http.ResponseWriter, request *http.Request) {
     // Or to optionally set a timeout value in seconds:
     // timeout := <timeout_value>
     // body, err := gripcontrol.CreateHoldResponse(channel, nil, &timeout)
-    if (err != nil) {
+    if err != nil {
         panic("Failed to create hold response: " + err.Error())
     }
 
@@ -147,34 +147,56 @@ func main() {
 }
 ```
 
-WebSocket example using the WEBrick gem and WEBrick WebSocket gem extension. A client connects to a GRIP proxy via WebSockets and the proxy forward the request to the origin. The origin accepts the connection over a WebSocket and responds with a control message indicating that the client should be subscribed to a channel. Note that in order for the GRIP proxy to properly interpret the control messages, the origin must provide a 'grip' extension in the 'Sec-WebSocket-Extensions' header. This is accomplished in the WEBrick WebSocket gem extension by adding the following line to lib/webrick/websocket/server.rb and rebuilding the gem: res['Sec-WebSocket-Extensions'] = 'grip; message-prefix=""'
+WebSocket example using golang.org/x/net/websocket. A client connects to a GRIP proxy via WebSockets and the proxy forward the request to the origin. The origin accepts the connection over a WebSocket and responds with a control message indicating that the client should be subscribed to a channel. Note that in order for the GRIP proxy to properly interpret the control messages, the origin must provide a 'grip' extension in the 'Sec-WebSocket-Extensions' header.
 
 ```go
-require 'webrick/websocket'
-require 'gripcontrol'
-require 'thread'
+package main
 
-class GripWebSocket < WEBrick::Websocket::Servlet
-  def socket_open(sock)
-    # Subscribe the WebSocket to a channel:
-    sock.puts('c:' + GripControl.websocket_control_message('subscribe',
-        {'channel' => '<channel>'}))
-    Thread.new { publish_message }
-  end
+import "time"
+import "net/http"
+import "github.com/gorilla/websocket"
+import "github.com/fanout/go-pubcontrol"
+import "github.com/fanout/go-gripcontrol"
 
-  def publish_message
-    # Wait and then publish a message to the subscribed channel:
-    sleep(3)
-    grippub = GripPubControl.new({'control_uri' => '<myendpoint>'})
-    grippub.publish('<channel>', Item.new(
-        WebSocketMessageFormat.new('Test WebSocket publish!!')))
-  end
-end
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+    CheckOrigin: func(r *http.Request) bool { return true },
+}
 
-server = WEBrick::Websocket::HTTPServer.new(Port: 80)
-server.mount "/websocket", GripWebSocket
-trap "INT" do server.shutdown end
-server.start
+func GripWebSocketHandler(writer http.ResponseWriter, request *http.Request) {
+    // Create the WebSocket control message:
+    wsControlMessage, err := gripcontrol.WebSocketControlMessage("subscribe",
+            map[string]interface{} { "channel": "<channel>" })
+    if err != nil {
+        panic("Unable to create control message: " + err.Error())
+    }
+
+    // Ensure that the GRIP proxy processes control messages by upgrading
+    // with the Sec-WebSocket-Extensions header:
+    conn, _ := upgrader.Upgrade(writer, request, http.Header {
+            "Sec-WebSocket-Extensions": []string {"grip; message-prefix=\"\""}})
+
+    // Subscribe the WebSocket to a channel:
+    conn.WriteMessage(1, []byte("c:" + wsControlMessage))
+
+    // Wait 3 seconds and publish a message to the subscribed channel:
+    time.Sleep(3 * time.Second)
+    pub := gripcontrol.NewGripPubControl([]map[string]interface{} {
+            map[string]interface{} { "control_uri": "<myendpoint_uri>" }})
+    format := &gripcontrol.WebSocketMessageFormat {
+            Content: []byte("Test WebSocket Publish!!") } 
+    item := pubcontrol.NewItem([]pubcontrol.Formatter{format}, "", "")
+    err = pub.Publish("test_channel", item)
+    if err != nil {
+        panic("Publish failed with: " + err.Error())
+    }
+}
+
+func main() {
+    http.HandleFunc("/", GripWebSocketHandler)
+    http.ListenAndServe(":80", nil)
+}
 ```
 
 WebSocket over HTTP example using the WEBrick gem. In this case, a client connects to a GRIP proxy via WebSockets and the GRIP proxy communicates with the origin via HTTP.

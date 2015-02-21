@@ -33,17 +33,17 @@ func CreateHold(mode string, channels []*Channel, response interface{},
     for _, channel := range channels {
         ichannel := make(map[string]string)
         ichannel["name"] = channel.Name
-        if (channel.PrevId != "") {
+        if channel.PrevId != "" {
             ichannel["prev-id"] = channel.PrevId
         }
         ichannels = append(ichannels, ichannel)
     }
     hold["channels"] = ichannels
-    if (timeout != nil) {
+    if timeout != nil {
         hold["timeout"] = timeout
     }
     iresponse := make(map[string]interface{})
-    if (response != nil) {
+    if response != nil {
         var processedResponse *Response
         switch response.(type) {
             case *Response:
@@ -56,19 +56,19 @@ func CreateHold(mode string, channels []*Channel, response interface{},
                 return "", &GripFormatError{err: "response must be of type " + 
                         "*Response, []byte, or string"}        
         }
-        if (processedResponse.Code > 0) {
+        if processedResponse.Code > 0 {
             iresponse["code"] = processedResponse.Code
         }
-        if (processedResponse.Reason != "") {
+        if processedResponse.Reason != "" {
             iresponse["reason"] = processedResponse.Reason
         }
         if (processedResponse.Headers != nil &&
                 len(processedResponse.Headers) > 0) {
             iresponse["headers"] = processedResponse.Headers
         }
-        if (processedResponse.Body != nil && len(processedResponse.Body) > 0) {
+        if processedResponse.Body != nil && len(processedResponse.Body) > 0 {
             body := string(processedResponse.Body)
-            if (utf8.ValidString(body)) {
+            if utf8.ValidString(body) {
                 iresponse["body"] = body
             } else {
                 iresponse["body-bin"] =
@@ -78,11 +78,11 @@ func CreateHold(mode string, channels []*Channel, response interface{},
     }
     instruct := make(map[string]interface{})
     instruct["hold"] = hold
-    if (len(iresponse) > 0) {
+    if len(iresponse) > 0 {
         instruct["response"] = iresponse
     }
     message, err := json.Marshal(instruct)
-    if (err != nil) {
+    if err != nil {
         return "", err
     }
     return string(message), nil
@@ -90,7 +90,7 @@ func CreateHold(mode string, channels []*Channel, response interface{},
 
 func ParseGripUri(rawUri string) (map[string]interface{}, error) {
     uri, err := url.Parse(rawUri)
-    if (err != nil) {
+    if err != nil {
         return nil, err
     }
     params := uri.Query()
@@ -105,7 +105,7 @@ func ParseGripUri(rawUri string) (map[string]interface{}, error) {
         delete(params, "key")
     }
     decodedKey := make([]byte, 0)
-    if (key != "" && key[:7] == "base64:") {
+    if key != "" && key[:7] == "base64:" {
         var err error
         decodedKey, err = base64.StdEncoding.DecodeString(key[7:])
         if err != nil {
@@ -114,19 +114,19 @@ func ParseGripUri(rawUri string) (map[string]interface{}, error) {
     }
     qs := params.Encode()
     path := uri.Path
-    if (path[len(path) - 1:] == "/") {
+    if path[len(path) - 1:] == "/" {
         path = path[:len(path) - 1]
     }
     controlUri := uri.Scheme + "://" + uri.Host + path
-    if (len(qs) > 0) {
+    if len(qs) > 0 {
         controlUri += "?" + qs
     }
     out := make(map[string]interface{})
     out["control_uri"] = controlUri
-    if (iss != "") {        
+    if iss != "" {
         out["control_iss"] = iss
     }
-    if (len(decodedKey) > 0) {        
+    if len(decodedKey) > 0 {
         out["key"] = decodedKey
     }
     return out, nil
@@ -135,7 +135,7 @@ func ParseGripUri(rawUri string) (map[string]interface{}, error) {
 func ValidateSig(token, key string) bool {
     parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{},
             error) { return []byte(key), nil })
-    if (err == nil && parsedToken.Valid) {
+    if err == nil && parsedToken.Valid {
         return true;
     }
     return false
@@ -145,7 +145,7 @@ func CreateGripChannelHeader(channels []*Channel) string {
     var parts []string
     for _, channel := range channels {   
         s := channel.Name
-        if (channel.PrevId != "") {
+        if channel.PrevId != "" {
             s += "; prev-id=" + channel.PrevId
         }
         parts = append(parts, s)
@@ -153,15 +153,15 @@ func CreateGripChannelHeader(channels []*Channel) string {
     return strings.Join(parts, ", ")
 }
 
-func DecodeWebsocketEvents(body string) ([]*WebSocketEvent, error) {
+func DecodeWebSocketEvents(body string) ([]*WebSocketEvent, error) {
     out := make([]*WebSocketEvent, 0)
     for start := 0; start < utf8.RuneCountInString(body); {
         partialBody := body[start:]
-        if (partialBody == "\r\n") {
+        if partialBody == "\r\n" {
             break
         }
         at := strings.Index(partialBody, "\r\n")
-        if (at == -1) {
+        if at == -1 {
             return nil, &GripFormatError{err: "bad format"} 
         }
         start += at + 2
@@ -169,7 +169,7 @@ func DecodeWebsocketEvents(body string) ([]*WebSocketEvent, error) {
         typeline := partialBody[0:at]
         at = strings.Index(typeline, " ")
         var event *WebSocketEvent
-        if (at != -1) {
+        if at != -1 {
             etype := typeline[:at]
             var clen int
             fmt.Sscanf(typeline[at + 1:], "%x", &clen)
@@ -184,10 +184,10 @@ func DecodeWebsocketEvents(body string) ([]*WebSocketEvent, error) {
     return out, nil
 }
 
-func EncodeWebsocketEvents(events []*WebSocketEvent) string {
+func EncodeWebSocketEvents(events []*WebSocketEvent) string {
     out := ""
     for _, event := range events {
-        if (event.Content != "") {
+        if event.Content != "" {
             out += fmt.Sprintf("%s %x\r\n%s\r\n", event.Type, 
                     len(event.Content), event.Content)
         } else {
@@ -197,10 +197,10 @@ func EncodeWebsocketEvents(events []*WebSocketEvent) string {
     return out
 }
 
-func WebsocketControlMessage(messageType string,
+func WebSocketControlMessage(messageType string,
         args map[string]interface{}) (string, error) {
     out := make(map[string]interface{})
-    if (args != nil) {
+    if args != nil {
         for key, value := range args {
             out[key] = value
         }
