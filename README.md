@@ -261,7 +261,7 @@ func HandleRequest(writer http.ResponseWriter, request *http.Request) {
             format := &gripcontrol.WebSocketMessageFormat {
                     Content: []byte("Test WebSocket Publish!!") } 
             item := pubcontrol.NewItem([]pubcontrol.Formatter{format}, "", "")
-            err = pub.Publish("test_channel", item)
+            err = pub.Publish("<channel>", item)
             if err != nil {
                 panic("Publish failed with: " + err.Error())
             }
