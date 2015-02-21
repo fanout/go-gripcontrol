@@ -231,7 +231,7 @@ func HandleRequest(writer http.ResponseWriter, request *http.Request) {
     writer.Header().Set("Sec-WebSocket-Extensions", "grip; message-prefix=\"\"")
     writer.Header().Set("Content-Type", "application/websocket-events")
 
-    // Decode the WebSocket events:
+    // Decode the incoming WebSocket events:
     body, _ := ioutil.ReadAll(request.Body)
     inEvents, err := gripcontrol.DecodeWebSocketEvents(string(body))
     if err != nil {
