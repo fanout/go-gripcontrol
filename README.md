@@ -14,6 +14,15 @@ Installation
 ------------
 
 ```sh
+go get github.com/fanout/go-gripcontrol
+```
+
+go-gripcontrol requires jwt-go 2.2.0 and go-pubcontrol 1.0.0. To ensure that the correct version of both of these dependencies are installed use godeps:
+
+```sh
+go get github.com/tools/godep
+cd $GOPATH/src/github.com/fanout/go-gripcontrol
+$GOPATH/bin/godep restore
 ```
 
 Usage
@@ -202,53 +211,73 @@ func main() {
 WebSocket over HTTP example using the WEBrick gem. In this case, a client connects to a GRIP proxy via WebSockets and the GRIP proxy communicates with the origin via HTTP.
 
 ```go
-require 'webrick'
-require 'gripcontrol'
+package main
 
-class GripWebSocketOverHttpResponse < WEBrick::HTTPServlet::AbstractServlet
-  def do_POST(request, response)
-    # Validate the Grip-Sig header:
-    if !GripControl.validate_sig(request['Grip-Sig'], '<key>')
-      return
-    end
+import "github.com/fanout/go-gripcontrol"
+import "github.com/fanout/go-pubcontrol"
+import "io/ioutil"
+import "net/http"
+import "time"
+import "io"
 
-    # Set the headers required by the GRIP proxy:
-    response.status = 200
-    response['Sec-WebSocket-Extensions'] = 'grip; message-prefix=""'
-    response['Content-Type'] = 'application/websocket-events'
+func HandleRequest(writer http.ResponseWriter, request *http.Request) {
+    // Validate the Grip-Sig header:
+    if !gripcontrol.ValidateSig(request.Header["Grip-Sig"][0], "<key>") {
+        http.Error(writer, "GRIP authorization failed", http.StatusUnauthorized)
+        return
+    }
 
-    in_events = GripControl.decode_websocket_events(request.body)
-    if in_events[0].type == 'OPEN'
-      # Open the WebSocket and subscribe it to a channel:
-      out_events = []
-      out_events.push(WebSocketEvent.new('OPEN'))
-      out_events.push(WebSocketEvent.new('TEXT', 'c:' +
-          GripControl.websocket_control_message('subscribe',
-          {'channel' => '<channel>'})))
-      response.body = GripControl.encode_websocket_events(out_events)
-      Thread.new { publish_message }
-    end
-  end
+    // Set the headers required by the GRIP proxy:
+    writer.Header().Set("Sec-WebSocket-Extensions", "grip; message-prefix=\"\"")
+    writer.Header().Set("Content-Type", "application/websocket-events")
 
-  def publish_message
-    # Wait and then publish a message to the subscribed channel:
-    sleep(3)
-    grippub = GripPubControl.new({'control_uri' => '<myendpoint>'})
-    grippub.publish('<channel>', Item.new(
-        WebSocketMessageFormat.new('Test WebSocket publish!!')))
-  end
-end
+    body, _ := ioutil.ReadAll(request.Body)
+    inEvents, err := gripcontrol.DecodeWebSocketEvents(string(body))
+    if err != nil {
+        panic("Failed to decode WebSocket events: " + err.Error())
+    }
 
-server = WEBrick::HTTPServer.new(Port: 80)
-server.mount "/websocket", GripWebSocketOverHttpResponse
-trap "INT" do server.shutdown end
-server.start
+    if inEvents[0].Type == "OPEN" {
+        // Create the WebSocket control message:
+        wsControlMessage, err := gripcontrol.WebSocketControlMessage("subscribe",
+                map[string]interface{} { "channel": "<channel>" })
+        if err != nil {
+            panic("Unable to create control message: " + err.Error())
+        }
+
+        // Open the WebSocket and subscribe it to a channel:
+        outEvents := []*gripcontrol.WebSocketEvent {
+                &gripcontrol.WebSocketEvent { Type: "OPEN" },
+                &gripcontrol.WebSocketEvent { Type: "TEXT",
+                        Content: "c:" + wsControlMessage }}
+        io.WriteString(writer, gripcontrol.EncodeWebSocketEvents(outEvents))
+
+        go func() {
+            // Wait 3 seconds and publish a message to the subscribed channel:
+            time.Sleep(3 * time.Second)
+            pub := gripcontrol.NewGripPubControl([]map[string]interface{} {
+                    map[string]interface{} { "control_uri": "<myendpoint_uri>" }})
+            format := &gripcontrol.WebSocketMessageFormat {
+                    Content: []byte("Test WebSocket Publish!!") } 
+            item := pubcontrol.NewItem([]pubcontrol.Formatter{format}, "", "")
+            err = pub.Publish("test_channel", item)
+            if err != nil {
+                panic("Publish failed with: " + err.Error())
+            }
+        }()
+    }
+}
+
+func main() {
+    http.HandleFunc("/", HandleRequest)
+    http.ListenAndServe(":80", nil)
+}
 ```
 
 Parse a GRIP URI to extract the URI, ISS, and key values. The values will be returned in a hash containing 'control_uri', 'control_iss', and 'key' keys.
 
 ```go
-config = GripControl.parse_grip_uri(
-    'http://api.fanout.io/realm/<myrealm>?iss=<myrealm>' +
-    '&key=base64:<myrealmkey>')
+config := gripcontrol.ParseGripUri(
+    "http://api.fanout.io/realm/<myrealm>?iss=<myrealm>" +
+    "&key=base64:<myrealmkey>")
 ```
