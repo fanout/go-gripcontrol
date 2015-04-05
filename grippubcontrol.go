@@ -9,10 +9,18 @@ package gripcontrol
 
 import "github.com/fanout/go-pubcontrol"
 
+// The GripPubControl struct allows consumers to easily publish HTTP response
+// and HTTP stream format messages to GRIP proxies. Configuring GripPubControl
+// is slightly different from configuring PubControl in that the 'uri' and
+// 'iss' keys in each config entry should have a 'control_' prefix.
+// GripPubControl inherits from PubControl and therefore also provides all
+// of the same functionality.
 type GripPubControl struct {
     *pubcontrol.PubControl
 }
 
+// Initialize with or without a configuration. A configuration can be applied
+// after initialization via the apply_grip_config method.
 func NewGripPubControl(config []map[string]interface{}) *GripPubControl {
     gripPubControl := &GripPubControl{pubcontrol.NewPubControl(nil)}
     if config != nil && len(config) > 0 {
@@ -21,6 +29,11 @@ func NewGripPubControl(config []map[string]interface{}) *GripPubControl {
     return gripPubControl
 }
 
+// Apply the specified GRIP configuration to this GripPubControl instance.
+// The configuration object can either be a hash or an array of hashes where
+// each hash corresponds to a single PubControlClient instance. Each hash
+// will be parsed and a PubControlClient will be created either using just
+// a URI or a URI and JWT authentication information.
 func (gpc *GripPubControl) ApplyGripConfig(config []map[string]interface{}) {
     for _, entry := range config {
         if _, ok := entry["control_uri"]; !ok {
@@ -36,6 +49,12 @@ func (gpc *GripPubControl) ApplyGripConfig(config []map[string]interface{}) {
     }
 }
 
+// Publish an HTTP response format message to all of the configured
+// PubControlClients with a specified channel, message, and optional ID,
+// previous ID, and callback. Note that the 'http_response' parameter can
+// be provided as either an HttpResponseFormat instance or a string / byte
+// array (in which case an HttpResponseFormat instance will automatically
+// be created and have the 'body' field set to the specified value).
 func (gpc *GripPubControl) PublishHttpResponse(channel string, http_response interface{},
         id, prevId string) error {
     var format *HttpResponseFormat
@@ -55,6 +74,12 @@ func (gpc *GripPubControl) PublishHttpResponse(channel string, http_response int
     return gpc.Publish(channel, item)
 }
 
+// Publish an HTTP stream format message to all of the configured
+// PubControlClients with a specified channel, message, and optional ID,
+// previous ID, and callback. Note that the 'http_stream' parameter can
+// be provided as either an HttpStreamFormat instance or a string / byte
+// array (in which case an HttpStreamFormat instance will automatically
+// be created and have the 'content' field set to the specified string).
 func (gpc *GripPubControl) PublishHttpStream(channel string, http_stream interface{},
         id, prevId string) error {
     var format *HttpStreamFormat
@@ -74,10 +99,13 @@ func (gpc *GripPubControl) PublishHttpStream(channel string, http_stream interfa
     return gpc.Publish(channel, item)
 }
 
+// An error object representing an error encountered during publishing.
 type GripPublishError struct {
     err string
 }
 
+// The function used to retrieve the message associated with a
+// GripPublishError.
 func (e GripPublishError) Error() string {
     return e.err
 }
