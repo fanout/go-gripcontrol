@@ -43,7 +43,12 @@ func (gpc *GripPubControl) ApplyGripConfig(config []map[string]interface{}) {
         if _, ok := entry["control_iss"]; ok {
             claim := make(map[string]interface{})
             claim["iss"] = entry["control_iss"]
-            pcc.SetAuthJwt(claim, entry["key"].([]byte))
+            switch entry["key"].(type) {
+                case string:
+                    pcc.SetAuthJwt(claim, []byte(entry["key"].(string)))
+                case []byte:
+                    pcc.SetAuthJwt(claim, entry["key"].([]byte))
+            }
         }
         gpc.AddClient(pcc)
     }
@@ -55,22 +60,12 @@ func (gpc *GripPubControl) ApplyGripConfig(config []map[string]interface{}) {
 // be provided as either an HttpResponseFormat instance or a string / byte
 // array (in which case an HttpResponseFormat instance will automatically
 // be created and have the 'body' field set to the specified value).
-func (gpc *GripPubControl) PublishHttpResponse(channel string, http_response interface{},
-        id, prevId string) error {
-    var format *HttpResponseFormat
-    switch http_response.(type) {
-        case *HttpResponseFormat:
-            format = http_response.(*HttpResponseFormat)
-        case string:
-            format = &HttpResponseFormat{Body: []byte(http_response.(string))}
-        case []byte:
-            format = &HttpResponseFormat{Body: http_response.([]byte)}
-        default:
-            return &GripPublishError{err:
-                "http_response parameter must be of type " +
-                "*HttpResponseFormat, string, or []byte"}
+func (gpc *GripPubControl) PublishHttpResponse(channel string,
+        http_response interface{}, id, prevId string) error {
+    item, err := getHttpResponseItem(http_response, id, prevId)
+    if err != nil {
+        return err
     }
-    item := pubcontrol.NewItem([]pubcontrol.Formatter{format}, id, prevId)
     return gpc.Publish(channel, item)
 }
 
@@ -80,8 +75,39 @@ func (gpc *GripPubControl) PublishHttpResponse(channel string, http_response int
 // be provided as either an HttpStreamFormat instance or a string / byte
 // array (in which case an HttpStreamFormat instance will automatically
 // be created and have the 'content' field set to the specified string).
-func (gpc *GripPubControl) PublishHttpStream(channel string, http_stream interface{},
-        id, prevId string) error {
+func (gpc *GripPubControl) PublishHttpStream(channel string,
+        http_stream interface{}, id, prevId string) error {
+    item, err := getHttpStreamItem(http_stream, id, prevId)
+    if err != nil {
+        return err
+    }
+    return gpc.Publish(channel, item)
+}
+
+// An internal method for returning an Item instance used for HTTP response
+// publishing based on the specified parameters.
+func getHttpResponseItem(http_response interface{}, id,
+        prevId string) (*pubcontrol.Item, error) {
+    var format *HttpResponseFormat
+    switch http_response.(type) {
+        case *HttpResponseFormat:
+            format = http_response.(*HttpResponseFormat)
+        case string:
+            format = &HttpResponseFormat{Body: []byte(http_response.(string))}
+        case []byte:
+            format = &HttpResponseFormat{Body: http_response.([]byte)}
+        default:
+            return nil, &GripPublishError{err:
+                "http_response parameter must be of type " +
+                "*HttpResponseFormat, string, or []byte"}
+    }
+    return pubcontrol.NewItem([]pubcontrol.Formatter{format}, id, prevId), nil
+}
+
+// An internal method for returning an Item instance used for HTTP stream
+// publishing based on the specified parameters.
+func getHttpStreamItem(http_stream interface{}, id,
+        prevId string) (*pubcontrol.Item, error) {
     var format *HttpStreamFormat
     switch http_stream.(type) {
         case *HttpStreamFormat:
@@ -91,12 +117,11 @@ func (gpc *GripPubControl) PublishHttpStream(channel string, http_stream interfa
         case []byte:
             format = &HttpStreamFormat{Content: http_stream.([]byte)}
         default:
-            return &GripPublishError{err:
+            return nil, &GripPublishError{err:
                 "http_stream parameter must be of type " +
                 "*HttpStreamFormat, string, or []byte"} 
     }
-    item := pubcontrol.NewItem([]pubcontrol.Formatter{format}, id, prevId)
-    return gpc.Publish(channel, item)
+    return pubcontrol.NewItem([]pubcontrol.Formatter{format}, id, prevId), nil
 }
 
 // An error object representing an error encountered during publishing.
