@@ -40,60 +40,21 @@ func CreateHoldStream(channels []*Channel,
 }
 
 // Create GRIP hold instructions for the specified mode, channels, response
-// and optional timeout value. The channel parameter can be specified as
-// either a string representing the channel name, a Channel instance or an
-// array of Channel instances. The response parameter can be specified as
-// either a string representing the response body or a Response instance.
+// and optional timeout value. The response parameter can be specified as
+// either a string / byte array representing the response body or a Response
+// instance.
 func CreateHold(mode string, channels []*Channel, response interface{},
         timeout *int) (string, error) {
     hold := make(map[string]interface{})
     hold["mode"] = mode
-    ichannels := make([]map[string]string, 0)
-    for _, channel := range channels {
-        ichannel := make(map[string]string)
-        ichannel["name"] = channel.Name
-        if channel.PrevId != "" {
-            ichannel["prev-id"] = channel.PrevId
-        }
-        ichannels = append(ichannels, ichannel)
-    }
+    ichannels := getHoldChannels(channels)
     hold["channels"] = ichannels
     if timeout != nil {
         hold["timeout"] = timeout
     }
-    iresponse := make(map[string]interface{})
-    if response != nil {
-        var processedResponse *Response
-        switch response.(type) {
-            case *Response:
-                processedResponse = response.(*Response)
-            case string:
-                processedResponse = &Response{Body: []byte(response.(string))}
-            case []byte:
-                processedResponse = &Response{Body: response.([]byte)}
-            default:
-                return "", &GripFormatError{err: "response must be of type " + 
-                        "*Response, []byte, or string"}        
-        }
-        if processedResponse.Code > 0 {
-            iresponse["code"] = processedResponse.Code
-        }
-        if processedResponse.Reason != "" {
-            iresponse["reason"] = processedResponse.Reason
-        }
-        if (processedResponse.Headers != nil &&
-                len(processedResponse.Headers) > 0) {
-            iresponse["headers"] = processedResponse.Headers
-        }
-        if processedResponse.Body != nil && len(processedResponse.Body) > 0 {
-            body := string(processedResponse.Body)
-            if utf8.ValidString(body) {
-                iresponse["body"] = body
-            } else {
-                iresponse["body-bin"] =
-                        base64.StdEncoding.EncodeToString(processedResponse.Body)
-            }
-        }
+    iresponse, err := getHoldResponse(response)
+    if err != nil {
+        return "", err
     }
     instruct := make(map[string]interface{})
     instruct["hold"] = hold
@@ -128,7 +89,7 @@ func ParseGripUri(rawUri string) (map[string]interface{}, error) {
         key = params["key"][0]
         delete(params, "key")
     }
-    decodedKey := make([]byte, 0)
+    decodedKey := []byte(key)
     if key != "" && key[:7] == "base64:" {
         var err error
         decodedKey, err = base64.StdEncoding.DecodeString(key[7:])
@@ -250,6 +211,61 @@ func WebSocketControlMessage(messageType string,
     out["type"] = messageType
     message, err := json.Marshal(out)
     return string(message), err
+}
+
+// An internal method used to get a channel map used for GRIP holds. The
+// resulting map is used for creating GRIP proxy hold instructions.
+func getHoldChannels(channels []*Channel) []map[string]string {
+    ichannels := make([]map[string]string, 0)
+    for _, channel := range channels {
+        ichannel := make(map[string]string)
+        ichannel["name"] = channel.Name
+        if channel.PrevId != "" {
+            ichannel["prev-id"] = channel.PrevId
+        }
+        ichannels = append(ichannels, ichannel)
+    }
+    return ichannels
+}
+
+// An internal method used to get a response map used for GRIP holds. The
+// resulting hash is used for creating GRIP proxy hold instructions.
+func getHoldResponse(response interface{}) (map[string]interface{}, error) {
+    iresponse := make(map[string]interface{})
+    if response != nil {
+        var processedResponse *Response
+        switch response.(type) {
+            case *Response:
+                processedResponse = response.(*Response)
+            case string:
+                processedResponse = &Response{Body: []byte(response.(string))}
+            case []byte:
+                processedResponse = &Response{Body: response.([]byte)}
+            default:
+                return nil, &GripFormatError{err: "response must be of type " + 
+                        "*Response, []byte, or string"}        
+        }
+        if processedResponse.Code > 0 {
+            iresponse["code"] = processedResponse.Code
+        }
+        if processedResponse.Reason != "" {
+            iresponse["reason"] = processedResponse.Reason
+        }
+        if (processedResponse.Headers != nil &&
+                len(processedResponse.Headers) > 0) {
+            iresponse["headers"] = processedResponse.Headers
+        }
+        if processedResponse.Body != nil && len(processedResponse.Body) > 0 {
+            body := string(processedResponse.Body)
+            if utf8.ValidString(body) {
+                iresponse["body"] = body
+            } else {
+                iresponse["body-bin"] =
+                        base64.StdEncoding.EncodeToString(processedResponse.Body)
+            }
+        }
+    }
+    return iresponse, nil
 }
 
 // An error object used to represent a GRIP formatting error.

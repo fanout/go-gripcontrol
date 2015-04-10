@@ -74,7 +74,7 @@ func (gpc *GripPubControl) PublishHttpResponse(channel string,
 // previous ID, and callback. Note that the 'http_stream' parameter can
 // be provided as either an HttpStreamFormat instance or a string / byte
 // array (in which case an HttpStreamFormat instance will automatically
-// be created and have the 'content' field set to the specified string).
+// be created and have the 'content' field set to the specified value).
 func (gpc *GripPubControl) PublishHttpStream(channel string,
         http_stream interface{}, id, prevId string) error {
     item, err := getHttpStreamItem(http_stream, id, prevId)
