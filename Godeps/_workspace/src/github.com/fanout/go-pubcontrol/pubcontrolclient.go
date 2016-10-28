@@ -94,11 +94,12 @@ func (pcc *PubControlClient) generateAuthHeader() (string, error) {
     } else if pcc.authJwtClaim != nil {
         token := jwt.New(jwt.SigningMethodHS256)
         token.Valid = true
-        for k, v := range pcc.authJwtClaim {
-            token.Claims[k] = v
+        claims := token.Claims.(jwt.MapClaims)
+	for k, v := range pcc.authJwtClaim {
+            claims[k] = v
         }
         if _, ok := pcc.authJwtClaim["exp"]; !ok {
-            token.Claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
+            claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
         }
         tokenString, err := token.SignedString(pcc.authJwtKey)
         if err != nil {

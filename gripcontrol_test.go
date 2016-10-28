@@ -111,20 +111,23 @@ func doesKeyExist(obj map[string]interface{}, key string) bool {
 func TestValidateSig(t *testing.T) {
     token := jwt.New(jwt.SigningMethodHS256)
     token.Valid = true
-    token.Claims["iss"] = "realm"
-    token.Claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
+    claims := token.Claims.(jwt.MapClaims)
+    claims["iss"] = "realm"
+    claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
     tokenString, _ := token.SignedString([]byte("key"))
     assert.True(t, ValidateSig(tokenString, "key"))
     token = jwt.New(jwt.SigningMethodHS256)
     token.Valid = true
-    token.Claims["iss"] = "realm"
-    token.Claims["exp"] = time.Now().Add(0 - time.Second * 3600).Unix()
+    claims = token.Claims.(jwt.MapClaims)
+    claims["iss"] = "realm"
+    claims["exp"] = time.Now().Add(0 - time.Second * 3600).Unix()
     tokenString, _ = token.SignedString([]byte("key"))
     assert.False(t, ValidateSig(tokenString, "key")) 
     token = jwt.New(jwt.SigningMethodHS256)
     token.Valid = true
-    token.Claims["iss"] = "realm"
-    token.Claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
+    claims = token.Claims.(jwt.MapClaims) 
+    claims["iss"] = "realm"
+    claims["exp"] = time.Now().Add(time.Second * 3600).Unix()
     tokenString, _ = token.SignedString([]byte("key"))
     assert.False(t, ValidateSig(tokenString, "wrong_key")) 
 }
