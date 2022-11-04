@@ -11,7 +11,7 @@ import ("testing"
         "time"
         "encoding/json"
         "encoding/base64"
-        "github.com/dgrijalva/jwt-go"
+        "github.com/golang-jwt/jwt"
         "github.com/stretchr/testify/assert")
 
 func TestCreateHold(t *testing.T) {
