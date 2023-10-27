@@ -31,6 +31,14 @@ func TestApplyGripConfig(t *testing.T) {
             "key": "key"}})
 }
 
+func TestApplyGripConfigBearer(t *testing.T) {
+    gpc := NewGripPubControl(nil)
+    gpc.ApplyGripConfig([]map[string]interface{} {
+            map[string]interface{} {
+            "control_uri": "uri",
+            "key": "key"}})
+}
+
 func TestPublishHttpResponse(t *testing.T) {
     gpc := NewGripPubControl([]map[string]interface{} {
             map[string]interface{} {
