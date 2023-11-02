@@ -7,22 +7,24 @@
 
 package gripcontrol
 
-import ("testing"
-        "github.com/stretchr/testify/assert")
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestWebSocketMessageFormatName(t *testing.T) {
-    fmt := &WebSocketMessageFormat{}
-    assert.Equal(t, fmt.Name(), "ws-message")
+	fmt := &WebSocketMessageFormat{}
+	assert.Equal(t, fmt.Name(), "ws-message")
 }
 
 func TestWebSocketMessageFormatExport(t *testing.T) {
-    fmt := &WebSocketMessageFormat{}
-    assert.Equal(t, fmt.Export(), map[string]interface{}{
-            "content": ""})
-    fmt = &WebSocketMessageFormat{Content: []byte("content")}
-    assert.Equal(t, fmt.Export(), map[string]interface{}{
-            "content": "content"})
-    fmt = &WebSocketMessageFormat{Content: []byte("content"), Binary:true}
-    assert.Equal(t, fmt.Export(), map[string]interface{}{
-            "content-bin": "content"})
+	fmt := &WebSocketMessageFormat{}
+	assert.Equal(t, fmt.Export(), map[string]interface{}{
+		"content": ""})
+	fmt = &WebSocketMessageFormat{Content: []byte("content")}
+	assert.Equal(t, fmt.Export(), map[string]interface{}{
+		"content": "content"})
+	fmt = &WebSocketMessageFormat{Content: []byte("content"), Binary: true}
+	assert.Equal(t, fmt.Export(), map[string]interface{}{
+		"content-bin": "content"})
 }

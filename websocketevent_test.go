@@ -7,11 +7,13 @@
 
 package gripcontrol
 
-import ("testing"
-        "github.com/stretchr/testify/assert")
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestWebSocketEvent(t *testing.T) {
-    we := &WebSocketEvent{Type:"type", Content:"content"}
-    assert.Equal(t, we.Type, "type")
-    assert.Equal(t, we.Content, "content")
+	we := &WebSocketEvent{Type: "type", Content: "content"}
+	assert.Equal(t, we.Type, "type")
+	assert.Equal(t, we.Content, "content")
 }

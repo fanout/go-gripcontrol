@@ -11,6 +11,6 @@ package gripcontrol
 // used with the GRIP WebSocket-over-HTTP protocol. It includes information
 // about the type of event as well as an optional content field.
 type WebSocketEvent struct {
-    Type string
-    Content string
+	Type    string
+	Content string
 }
