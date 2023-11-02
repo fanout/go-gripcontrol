@@ -7,11 +7,13 @@
 
 package gripcontrol
 
-import ("testing"
-        "github.com/stretchr/testify/assert")
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
 func TestChannel(t *testing.T) {
-    ch := &Channel{Name:"name", PrevId:"prev-id"}
-    assert.Equal(t, ch.Name, "name")
-    assert.Equal(t, ch.PrevId, "prev-id")
+	ch := &Channel{Name: "name", PrevId: "prev-id"}
+	assert.Equal(t, ch.Name, "name")
+	assert.Equal(t, ch.PrevId, "prev-id")
 }

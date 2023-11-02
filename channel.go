@@ -10,6 +10,6 @@ package gripcontrol
 // The Channel class is used to represent a channel in for a GRIP proxy and
 // tracks the previous ID of the last message.
 type Channel struct {
-    Name string
-    PrevId string
+	Name   string
+	PrevId string
 }
