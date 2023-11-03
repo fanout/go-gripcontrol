@@ -52,9 +52,9 @@ func (gpc *GripPubControl) ApplyGripConfig(config []map[string]interface{}) {
 		} else if _, ok := entry["key"]; ok {
 			switch entry["key"].(type) {
 			case string:
-				pcc.SetAuthBearer([]byte(entry["key"].(string)))
+				pcc.SetAuthBearer(entry["key"].(string))
 			case []byte:
-				pcc.SetAuthBearer(entry["key"].([]byte))
+				pcc.SetAuthBearer(string(entry["key"].([]byte)))
 			}
 		}
 		gpc.AddClient(pcc)
