@@ -3,7 +3,7 @@ module github.com/fanout/go-gripcontrol
 go 1.20
 
 require (
-	github.com/fanout/go-pubcontrol v0.0.0-20231108005356-ee32ac95c589
+	github.com/fanout/go-pubcontrol v1.2.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/stretchr/testify v1.8.4
 )

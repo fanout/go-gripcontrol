@@ -1,7 +1,7 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/fanout/go-pubcontrol v0.0.0-20231108005356-ee32ac95c589 h1:FnVyx91YnA/kLi+bvUY8A9u4xK/DoGRTMUxu0g1MYik=
-github.com/fanout/go-pubcontrol v0.0.0-20231108005356-ee32ac95c589/go.mod h1:7E12GoiO4rKf3D2aN6yi/4i+OdDaaTV0meewu6SBLDQ=
+github.com/fanout/go-pubcontrol v1.2.0 h1:pTQABRarHaPuUblkRtECY0jdJ/bkftHB3QN4aCLxdzM=
+github.com/fanout/go-pubcontrol v1.2.0/go.mod h1:2Jp/BECC0fiLcv6CgWCc0oFiejMwlIApjeb1quBJ00c=
 github.com/golang-jwt/jwt v3.2.2+incompatible h1:IfV12K8xAKAnZqdXVzCZ+TOjboZ2keLg81eXfW3O+oY=
 github.com/golang-jwt/jwt v3.2.2+incompatible/go.mod h1:8pz2t5EyA70fFQQSrl6XZXzqecmYZeUEB8OUGHkxJ+I=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
