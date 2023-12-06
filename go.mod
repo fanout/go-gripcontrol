@@ -1,4 +1,4 @@
-module fanout/go-gripcontrol
+module github.com/fanout/go-gripcontrol
 
 go 1.20
 
